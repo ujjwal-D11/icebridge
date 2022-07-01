@@ -34,3 +34,6 @@ icebridge = ["app-uber.jar"]
 
 [tool.setuptools.dynamic]
 version = {attr = "icebridge.VERSION"}
+
+[project.optional-dependencies]
+test = ["pytest"]
