@@ -24,11 +24,11 @@ class IcebergCatalog:
         self.catalog = java_catalog
 
     def create_table(
-        self,
-        name: str,
-        schema: IcebergSchema,
-        partition_spec: Optional[IcebergPartitionSpec] = None,
-        namespace: str = "default",
+            self,
+            name: str,
+            schema: IcebergSchema,
+            partition_spec: Optional[IcebergPartitionSpec] = None,
+            namespace: str = "default",
     ) -> IcebergTable:
         jvm = self.client.jvm()
         gateway = self.client.gateway
@@ -88,7 +88,10 @@ class IcebergCatalog:
         namespace_vargs[0] = "default"
         namespace_obj = jvm.org.apache.iceberg.catalog.Namespace.of(namespace_vargs)
 
-        hadoop_catalog_instance.createNamespace(namespace_obj)
+        try:
+            hadoop_catalog_instance.createNamespace(namespace_obj)
+        except Exception as ex:
+            print("Namespace already exist")
 
         return cls(client, hadoop_catalog_instance)
 
@@ -223,6 +226,9 @@ class IcebergTransaction:
     def delete_files(self) -> IcebergDeleteFiles:
         return IcebergDeleteFiles(self.client, self.transaction.newDelete())
 
+    def overwrite_files(self) -> IcebergOverwriteFiles:
+        return IcebergOverwriteFiles(self.client, self.transaction.newOverwrite())
+
     def table(self) -> IcebergTable:
         return IcebergTable(self.client, self.transaction.table())
 
@@ -250,6 +256,23 @@ class IcebergDeleteFiles:
 
     def commit(self) -> None:
         self.delete_files_obj.commit()
+
+
+class IcebergOverwriteFiles:
+    def __init__(self, client: IceBridgeClient, java_overwrite_files) -> None:
+        self.client = client
+        self.overwrite_files_obj = java_overwrite_files
+
+    def add_data_file(self, add_data_file: IcebergDataFile) -> IcebergOverwriteFiles:
+        java_add_data_file = add_data_file.data_file
+        return IcebergOverwriteFiles(self.client, self.overwrite_files_obj.addFile(java_add_data_file))
+
+    def delete_data_file(self, delete_data_file: IcebergDataFile) -> IcebergOverwriteFiles:
+        java_delete_data_file = delete_data_file.data_file
+        return IcebergOverwriteFiles(self.client, self.overwrite_files_obj.deleteFile(java_delete_data_file))
+
+    def commit(self) -> None:
+        self.overwrite_files_obj.commit()
 
 
 class IcebergMetrics:
@@ -324,10 +347,10 @@ class IcebergDataFile:
 
     @classmethod
     def from_parquet(
-        cls,
-        path: str,
-        metadata: pa.parquet.FileMetaData,
-        table: IcebergTable,
+            cls,
+            path: str,
+            metadata: pa.parquet.FileMetaData,
+            table: IcebergTable,
     ) -> IcebergDataFile:
         jvm = table.client.jvm()
         partition_spec = table.spec()
