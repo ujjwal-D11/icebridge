@@ -1,5 +1,5 @@
 #!/bin/bash
 
-./gradle uberJar
+gradle uberJar
 
 python3 setup.py build sdist

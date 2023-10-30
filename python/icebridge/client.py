@@ -88,7 +88,10 @@ class IcebergCatalog:
         namespace_vargs[0] = "default"
         namespace_obj = jvm.org.apache.iceberg.catalog.Namespace.of(namespace_vargs)
 
-        hadoop_catalog_instance.createNamespace(namespace_obj)
+        try:
+            hadoop_catalog_instance.createNamespace(namespace_obj)
+        except Exception as ex:
+            print("Namespace already exist")
 
         return cls(client, hadoop_catalog_instance)
 
